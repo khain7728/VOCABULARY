@@ -61,10 +61,35 @@ try {
 
 /**
  * Helper function: Kiểm tra kết nối
+ * Diễn giải: Thay thế mysqli::ping() bằng query đơn giản
+ * mysqli::ping() bị deprecated trong PHP 8.4 vì tính năng reconnect đã bị xóa
  */
 function checkDatabaseConnection() {
-    global $conn;
-    return $conn->ping();
+    global $conn, $pdo;
+
+    // Ưu tiên dùng PDO để kiểm tra kết nối (PDO không có deprecation)
+    if (isset($pdo)) {
+        try {
+            $pdo->query('SELECT 1')->fetchColumn();
+            return true;
+        } catch (PDOException $e) {
+            error_log("Database connection check failed (PDO): " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Fallback cho MySQLi nếu PDO không khả dụng
+    if (isset($conn)) {
+        try {
+            $result = $conn->query('SELECT 1');
+            return $result !== false;
+        } catch (Exception $e) {
+            error_log("Database connection check failed (MySQLi): " . $e->getMessage());
+            return false;
+        }
+    }
+
+    return false;
 }
 
 /**
